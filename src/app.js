@@ -16,7 +16,16 @@ const app = () => {
     },
   };
 
-  const watchedState = onChange(state, render(state));
+  const watchedState = onChange(state, (path, value) => {
+    switch (value) {
+      case 'valid':
+        render(state);
+        break;
+      case 'invalid':
+        render(state);
+        break;
+    }
+  });
 
   const form = document.querySelector('.rss-form');
 
