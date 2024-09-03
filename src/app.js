@@ -1,9 +1,11 @@
 import * as yup from 'yup';
 import onChange from 'on-change';
 import render from './view.js';
+import i18next from 'i18next';
+import resources from './locales/index.js';
 
-const validation = (data) => {
-  const schema = yup.string().required().url('Ссылка должна быть валидным URL').validate(data);
+const validation = (state) => {
+  const schema = yup.string().required().url('Ссылка должна быть валидным URL').notOneOf(state.form.links, 'RSS уже существует').validate(state.form.value);
   return schema;
 };
 
@@ -11,10 +13,18 @@ const app = () => {
   const state = {
     form: {
       value: '',
+      links: [],
       status: '',
       errors: '',
     },
   };
+
+  const i18nInstance = i18next.createInstance();
+  i18nInstance.init({
+    lng: 'ru',
+    debug: false,
+    resources,
+  });
 
   const watchedState = onChange(state, (path, value) => {
     switch (value) {
@@ -33,9 +43,10 @@ const app = () => {
     e.preventDefault();
     const input = document.querySelector('#url-input');
     state.form.value = input.value;
-    validation(state.form.value)
+    validation(state)
       .then(() => {
         watchedState.form.status = 'valid';
+        state.form.links.push(state.form.value);
       })
       .catch((error) => {
         state.form.errors = error;
