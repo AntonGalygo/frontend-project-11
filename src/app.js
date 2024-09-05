@@ -20,11 +20,13 @@ const app = () => {
   };
 
   const i18nInstance = i18next.createInstance();
-  i18nInstance.init({
-    lng: 'ru',
-    debug: false,
-    resources,
-  });
+  i18nInstance
+    .init({
+      lng: 'ru',
+      debug: false,
+      resources,
+    })
+    .then(console.log(i18nInstance.t('feedback.success')));
 
   const watchedState = onChange(state, (path, value) => {
     switch (value) {
