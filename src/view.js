@@ -1,12 +1,39 @@
-const render = (state, i18n) => {
-  const input = document.querySelector('#url-input');
-  const feedback = document.querySelector('.feedback');
-  switch (state.form.status) {
-    case 'valid':
+const input = document.querySelector('#url-input');
+const feedback = document.querySelector('.feedback');
+const cont = document.querySelector('.container-xxl');
+const posts = document.querySelector('.posts');
+const feeds = document.querySelector('.feeds');
+
+const createPostsList = (container, containerHeader) => {
+  container.innerHTML = '';
+  const card = document.createElement('div');
+  card.classList.add('card', 'border-0');
+  container.append(card);
+
+  const cardBody = document.createElement('div');
+  cardBody.classList.add('card-body');
+  card.append(cardBody);
+
+  const h2 = document.createElement('h2');
+  h2.classList.add('card-title', 'h4');
+  h2.textContent = containerHeader;
+  cardBody.append(h2);
+
+  const ul = document.createElement('ul');
+  ul.classList.add('list-group', 'border-0', 'rounded-0');
+  card.append(ul);
+
+  return ul;
+};
+
+export const render = (state, i18n) => {
+  switch (state.form.formState) {
+    case 'load':
       feedback.textContent = i18n('feedback.success');
       feedback.classList.remove('text-danger');
       feedback.classList.add('text-success');
       input.classList.remove('is-invalid');
+      createPostsList(posts, 'Посты');
       break;
 
     case 'invalid':
@@ -17,5 +44,3 @@ const render = (state, i18n) => {
       break;
   }
 };
-
-export default render;
