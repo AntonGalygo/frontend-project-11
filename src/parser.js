@@ -4,7 +4,7 @@ const parser = (response, i18n) => {
   const pars = new DOMParser();
   const doc = pars.parseFromString(response.data.contents, 'text/xml');
   if (!doc.querySelector('rss')) {
-    throw new Error(i18n('feedback.invalidUrl'));
+    throw new Error(i18n('feedback.invalidRss'));
   }
   const items = doc.querySelectorAll('item');
   const mainTitle = doc.querySelector('channel > title').textContent;
