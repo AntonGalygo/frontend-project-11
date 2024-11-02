@@ -106,6 +106,7 @@ const app = () => {
             const { mainDescription, mainTitle, posts } = data;
             const feeds = { mainTitle, mainDescription };
             watchedState.posts.push(...posts);
+            console.log(state.posts);
             watchedState.feeds.unshift(feeds);
             watchedState.form.formState = 'filling';
           })
