@@ -1,27 +1,24 @@
-import uniqueId from 'lodash';
+export default (string, format) => {
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(string, format);
 
-const parser = (response, i18n) => {
-  const pars = new DOMParser();
-  const doc = pars.parseFromString(response.data.contents, 'text/xml');
-  if (!doc.querySelector('rss')) {
-    throw new Error(i18n('feedback.invalidRss'));
+  if (parsed.querySelector('parsererror')) {
+    return 'parsererror';
   }
-  const items = doc.querySelectorAll('item');
-  const mainTitle = doc.querySelector('channel > title').textContent;
-  const mainDescription = doc.querySelector('channel > description').textContent;
-  const data = { mainTitle, mainDescription, posts: [] };
-  items.forEach((item) => {
-    const id = uniqueId();
-    const title = item.querySelector('title').textContent;
-    const href = item.querySelector('link').textContent;
-    const description = item.querySelector('description').textContent;
-    data.posts.push({
-      title,
-      description,
-      href,
-      id,
-    });
+
+  const feedItem = parsed.querySelector('channel');
+  const feedTitle = feedItem.querySelector('title').textContent;
+  const feedDescription = feedItem.querySelector('description').textContent;
+  const feed = { feedTitle, feedDescription };
+
+  const postsItems = feedItem.querySelectorAll('item');
+  const posts = [];
+  postsItems.forEach((post) => {
+    const postUrl = post.querySelector('link').textContent;
+    const postTitle = post.querySelector('title').textContent;
+    const postDescription = post.querySelector('description').textContent;
+    posts.push({ postUrl, postTitle, postDescription });
   });
-  return data;
+
+  return { feed, posts };
 };
-export default parser;

@@ -1,22 +1,17 @@
 export default {
   ru: {
     translation: {
-      header: 'RSS Агрегатор',
-      buttons: {
-        add: 'Добавить',
-        view: 'Просмотр',
-      },
       feedback: {
-        success: 'RSS успешно загружен',
+        uploaded: 'RSS успешно загружен',
         invalidUrl: 'Ссылка должна быть валидным URL',
+        exists: 'RSS уже существует',
         invalidRss: 'Ресурс не содержит валидный RSS',
-        duplicate: 'RSS уже существует',
-        axiosError: 'Ошибка сети',
-        empty: 'Не должно быть пустым',
+        networkError: 'Ошибка сети',
       },
-      items: {
-        posts: 'Посты',
-        feeds: 'Фиды',
+      feedsContainerHeader: 'Фиды',
+      postsContainerHeader: 'Посты',
+      posts: {
+        postButton: 'Просмотр',
       },
     },
   },

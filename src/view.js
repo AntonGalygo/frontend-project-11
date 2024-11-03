@@ -1,127 +1,210 @@
-const createAndAppendElement = (parent, elementType, classes, content, attributes) => {
-  const element = document.createElement(elementType);
-  classes.forEach((className) => {
-    element.classList.add(className);
-  });
-  if (content) {
-    element.textContent = content;
-  }
-  if (attributes) {
-    Object.entries(attributes).forEach(([key, value]) => {
-      element.setAttribute(key, value);
+import onChange from 'on-change';
+
+const form = document.querySelector('form');
+const input = form.querySelector('input');
+const button = form.querySelector('button');
+const feedback = document.querySelector('.feedback');
+const mainContainer = document.querySelector('.container-xxl');
+const postsContainer = mainContainer.querySelector('.posts');
+const feedsContainer = mainContainer.querySelector('.feeds');
+
+const startStateWatching = (state, i18nInstance) => {
+  const makeFeedback = (feedbackClass) => {
+    if (feedbackClass === 'text-success') {
+      feedback.classList.remove('text-danger');
+      feedback.classList.add('text-success');
+    } else {
+      feedback.classList.remove('text-success');
+      feedback.classList.add('text-danger');
+    }
+
+    if (state.app.state === 'uploaded') {
+      input.classList.remove('is-invalid');
+      input.value = '';
+      input.focus();
+    } else {
+      input.classList.add('is-invalid');
+    }
+
+    feedback.textContent = i18nInstance.t(`feedback.${state.app.state}`);
+  };
+
+  /* eslint no-param-reassign: ["error", { "props": false }] */
+  const makeContainerLayout = (container, containerHeader) => {
+    container.innerHTML = '';
+
+    const card = document.createElement('div');
+    card.classList.add('card', 'border-0');
+    container.append(card);
+
+    const cardBody = document.createElement('div');
+    cardBody.classList.add('card-body');
+    card.append(cardBody);
+
+    const h2 = document.createElement('h2');
+    h2.classList.add('card-title', 'h4');
+    h2.textContent = containerHeader;
+    cardBody.append(h2);
+
+    const ul = document.createElement('ul');
+    ul.classList.add('list-group', 'border-0', 'rounded-0');
+    card.append(ul);
+
+    return ul;
+  };
+
+  const fillFeedsContainer = (ul, feeds) => {
+    feeds.forEach((feed) => {
+      const { feedTitle, feedDescription } = feed;
+
+      const li = document.createElement('li');
+      li.classList.add('list-group-item', 'border-0', 'border-end-0');
+      ul.append(li);
+
+      const h3 = document.createElement('h3');
+      h3.classList.add('h6', 'm-0');
+      h3.textContent = feedTitle;
+
+      const p = document.createElement('p');
+      p.classList.add('m-0', 'small', 'text-black-50');
+      p.textContent = feedDescription;
+
+      li.append(h3, p);
     });
-  }
-  parent.append(element);
-  return element;
-};
+  };
 
-export const renderLoading = () => {
-  const feedback = document.querySelector('.feedback');
-  const sendButton = document.querySelector('[type="submit"]');
-  sendButton.disabled = true;
-  feedback.classList.remove('text-danger', 'text-success', 'is-invalid');
-  feedback.textContent = '';
-};
+  const fillPostsContainer = (ul, posts) => {
+    posts.forEach((post) => {
+      const { postId, postTitle, postUrl } = post;
 
-export const createContainerPosts = (state, posts, i18n) => {
-  const items = [...posts].reverse();
-  const postsContainer = document.querySelector('.posts');
-  postsContainer.innerHTML = '';
+      const li = document.createElement('li');
+      li.classList.add('list-group-item', 'border-0', 'border-end-0', 'd-flex', 'justify-content-between', 'align-items-start');
+      ul.prepend(li);
 
-  const divCardBorder = createAndAppendElement(postsContainer, 'div', ['card', 'border-0']);
-  const divCardBody = createAndAppendElement(divCardBorder, 'div', ['card-body']);
-  createAndAppendElement(divCardBody, 'h2', ['card-title', 'h4'], i18n('items.posts'));
-  createAndAppendElement(divCardBorder, 'ul', ['list-group', 'border-0', 'rounded-0']);
+      const a = document.createElement('a');
+      a.href = postUrl;
+      const uiPost = state.ui.posts.find((el) => el.postId === postId);
+      const styleForUrl = uiPost.state === 'viewed' ? 'fw-normal' : 'fw-bold';
+      a.classList.add(styleForUrl);
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = postTitle;
 
-  const ulPost = document.querySelector('.posts > .card > .list-group');
-  items.forEach((item) => {
-    const { title, href, id } = item;
-    const li = createAndAppendElement(ulPost, 'li', ['list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0']);
-    const linkClasses = state.clickedLinks.includes(id) ? ['fw-normal', 'link-secondary'] : ['fw-bold'];
-    createAndAppendElement(li, 'a', linkClasses, title, {
-      href,
-      'data-id': id,
-      target: '_blank',
-      rel: 'noopener noreferrer',
+      const postButton = document.createElement('button');
+      postButton.type = 'button';
+      postButton.classList.add('btn', 'btn-outline-primary', 'btn-sm');
+      postButton.id = postId;
+      postButton.dataset.bsToggle = 'modal';
+      postButton.dataset.bsTarget = '#modal';
+      postButton.textContent = i18nInstance.t('posts.postButton');
+
+      li.prepend(a, postButton);
     });
-    createAndAppendElement(li, 'button', ['btn', 'btn-outline-primary', 'btn-sm'], i18n('buttons.view'), {
-      type: 'button',
-      'data-id': id,
-      'data-bs-toggle': 'modal',
-      'data-bs-target': '#modal',
-    });
-    ulPost.prepend(li);
+  };
+
+  const changeUrlStyle = (id) => {
+    const currentButton = document.getElementById(id);
+    const currentPostUrl = currentButton.previousSibling;
+    currentPostUrl.classList.replace('fw-bold', 'fw-normal');
+  };
+
+  const fillMainContainer = () => {
+    if (state.app.feeds.length > 0) {
+      const postsContainerHeader = i18nInstance.t('postsContainerHeader');
+      const postsUlContainer = makeContainerLayout(postsContainer, postsContainerHeader);
+      fillPostsContainer(postsUlContainer, state.app.posts);
+
+      const feedsContainerHeader = i18nInstance.t('feedsContainerHeader');
+      const feedsUlContainer = makeContainerLayout(feedsContainer, feedsContainerHeader);
+      fillFeedsContainer(feedsUlContainer, state.app.feeds);
+    }
+  };
+
+  const watchedState = onChange(state, (path) => {
+    const splittedPath = path.split('.');
+
+    switch (splittedPath[0]) {
+      case 'app':
+        if (splittedPath[1] === 'state') {
+          switch (state.app.state) {
+            case 'uploaded':
+              button.disabled = false;
+              fillMainContainer();
+              makeFeedback('text-success', 'uploaded');
+              break;
+
+            case 'updated':
+              button.disabled = false;
+              fillMainContainer();
+              break;
+
+            case 'invalidUrl':
+              makeFeedback('text-danger', 'invalidUrl');
+              break;
+
+            case 'invalidRss':
+              button.disabled = false;
+              makeFeedback('text-danger', 'invalidRss');
+              break;
+
+            case 'networkError':
+              button.disabled = false;
+              makeFeedback('text-danger', 'networkError');
+              break;
+
+            case 'exists':
+              makeFeedback('text-danger', 'exists');
+              break;
+
+            case 'uploading':
+              button.disabled = true;
+              break;
+
+            default:
+              throw new Error(`Unknown state: ${state.app.state}`);
+          }
+        }
+        break;
+
+      case 'ui':
+        switch (splittedPath[1]) {
+          case 'modalId': {
+            const modalPostId = state.ui.modalId;
+            const modalPost = state.app.posts.find((post) => post.postId === modalPostId);
+            const { postTitle, postDescription, postUrl } = modalPost;
+
+            const modal = document.querySelector('.modal');
+            const modalTitle = modal.querySelector('.modal-title');
+            const modalBody = modal.querySelector('.modal-body');
+            const modalButton = modal.querySelector('a');
+
+            modalTitle.textContent = postTitle;
+            modalBody.textContent = postDescription;
+            modalButton.href = postUrl;
+
+            changeUrlStyle(modalPostId);
+            break;
+          }
+
+          case 'posts':
+            if (splittedPath[2]) {
+              const changedPost = state.ui.posts[splittedPath[2]];
+              const { postId } = changedPost;
+              changeUrlStyle(postId);
+            }
+            break;
+
+          default:
+            throw new Error(`Full path: ${splittedPath}. Unknown part of path: ${splittedPath[1]}`);
+        }
+        break;
+
+      default:
+        throw new Error(`Full path: ${splittedPath}. Unknown part of path: ${splittedPath[0]}`);
+    }
   });
-  return null;
+
+  return watchedState;
 };
 
-export const createContainerFeeds = (feeds, i18n) => {
-  const feed = feeds[0];
-  const { mainTitle, mainDescription } = feed;
-  const feedsContainer = document.querySelector('.feeds');
-  let ulFeeds;
-
-  if (!feedsContainer.hasChildNodes()) {
-    const divFeeds = createAndAppendElement(feedsContainer, 'div', ['card', 'border-0']);
-    const divCard = createAndAppendElement(divFeeds, 'div', ['card-body']);
-    ulFeeds = createAndAppendElement(divFeeds, 'ul', ['list-group', 'border-0', 'rounded-0']);
-    createAndAppendElement(divCard, 'h2', ['card-title', 'h4'], i18n('items.feeds'));
-  } else {
-    ulFeeds = document.querySelector('.feeds > .card > .list-group');
-  }
-  const li = createAndAppendElement(ulFeeds, 'li', ['list-group-item', 'border-0', 'border-end-0']);
-  createAndAppendElement(li, 'h3', ['h6', 'm-0'], mainTitle);
-  createAndAppendElement(li, 'p', ['m-0', 'small', 'text-black-50'], mainDescription);
-  ulFeeds.insertBefore(li, ulFeeds.firstChild);
-};
-
-export const renderFilling = (i18n) => {
-  const feedback = document.querySelector('.feedback');
-  const inputText = document.querySelector('#url-input');
-  const sendButton = document.querySelector('[type="submit"]');
-  sendButton.disabled = true;
-  feedback.classList.remove('text-danger', 'text-success', 'is-invalid');
-  feedback.textContent = '';
-
-  if (inputText.classList.contains('is-invalid')) {
-    inputText.classList.remove('is-invalid');
-  }
-  feedback.classList.add('text-success');
-  feedback.textContent = i18n('feedback.success');
-  inputText.value = '';
-  inputText.focus();
-  sendButton.removeAttribute('disabled');
-};
-
-export const renderError = (errorText) => {
-  const feedback = document.querySelector('.feedback');
-  const inputText = document.querySelector('#url-input');
-  const sendButton = document.querySelector('[type="submit"]');
-  sendButton.removeAttribute('disabled');
-  if (!inputText.classList.contains('is-invalid')) {
-    inputText.classList.add('is-invalid');
-  }
-  feedback.classList.add('text-danger');
-  const errorKey = `${errorText}`;
-  if (errorKey) {
-    feedback.textContent = errorText;
-  }
-};
-
-export const renderClick = (state) => {
-  const idClickLink = state.clickedLinks;
-  idClickLink.forEach((id) => {
-    const postElement = document.querySelector(`a[data-id="${id}"]`);
-    postElement.classList.add('fw-normal', 'link-secondary');
-    postElement.classList.remove('fw-bold');
-  });
-  const { activeItemId } = state;
-  const activeItem = state.posts.find((item) => item.id === activeItemId);
-
-  if (activeItem) {
-    const { title, href, description } = activeItem;
-    document.querySelector('.modal-header > h5').textContent = title;
-    document.querySelector('.modal-content > .modal-body').textContent = description;
-    document.querySelector('.modal-footer > a').setAttribute('href', href);
-  }
-};
+export { form, input, startStateWatching, postsContainer };

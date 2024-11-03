@@ -1,28 +1,27 @@
-import onChange from 'on-change';
-import i18next from 'i18next';
+import { string } from 'yup';
 import axios from 'axios';
-import * as Yup from 'yup';
+import i18n from 'i18next';
+import parseRss from './parser.js';
 import resources from './locales/index.js';
-import parser from './parser.js';
-import validate from './validate.js';
-import { createContainerPosts, createContainerFeeds, renderLoading, renderFilling, renderError, renderClick } from './view.js';
+import { form, input, startStateWatching, postsContainer } from './view.js';
 
-const app = () => {
-  const state = {
-    form: {
-      formState: '',
-    },
-    validLinks: [],
+const state = {
+  app: {
+    state: 'uploaded',
+    nextId: 0,
     feeds: [],
     posts: [],
-    errorMessage: '',
-    clickedLinks: [],
-    activeItemId: '',
-  };
+  },
+  ui: {
+    modalId: null,
+    posts: [],
+  },
+};
 
-  const allOriginsUrl = 'https://allorigins.hexlet.app/get?disableCache=true&url=';
+export default () => {
+  let watchedState;
 
-  const i18nInstance = i18next.createInstance();
+  const i18nInstance = i18n.createInstance();
   i18nInstance
     .init({
       lng: 'ru',
@@ -30,111 +29,160 @@ const app = () => {
       resources,
     })
     .then(() => {
-      const watchedState = onChange(state, (path, value) => {
-        switch (path) {
-          case 'form.formState': {
-            if (value === 'loading') {
-              renderLoading();
-            } else if (value === 'filling') {
-              renderFilling(i18nInstance.t);
-            } else if (value === 'error') {
-              renderError(state.errorMessage, i18nInstance.t);
-            }
+      watchedState = startStateWatching(state, i18nInstance);
+      const alloriginsUrl = 'https://allorigins.hexlet.app/get?disableCache=true';
+
+      const createSchema = () => {
+        const existedUrls = state.app.feeds.map(({ feedUrl }) => feedUrl);
+        return string().url().notOneOf(existedUrls);
+      };
+
+      const addPostInPosts = (post, feedId) => {
+        const postId = watchedState.app.nextId;
+        watchedState.app.nextId += 1;
+        const { postUrl, postTitle, postDescription } = post;
+
+        watchedState.app.posts.push({
+          feedId,
+          postId,
+          postUrl,
+          postTitle,
+          postDescription,
+        });
+
+        watchedState.ui.posts.push({
+          postId,
+          state: 'notViewed',
+        });
+      };
+
+      const getUrlFromResponse = (response) => {
+        const { url } = response.config;
+        const splittedUrl = url.split('url=');
+        const encodedUrl = splittedUrl[1];
+        return decodeURIComponent(encodedUrl);
+      };
+
+      const startUpdatingPosts = () => {
+        const promises = watchedState.app.feeds.map(({ feedUrl }) => axios.get(`${alloriginsUrl}&url=${encodeURIComponent(feedUrl)}`));
+
+        Promise.all(promises)
+          .then((responses) => {
+            responses.forEach((response) => {
+              const currentUrl = getUrlFromResponse(response);
+              const feed = watchedState.app.feeds.find(({ feedUrl }) => feedUrl === currentUrl);
+              const { feedId } = feed;
+
+              const parsed = parseRss(response.data.contents, 'text/xml');
+              const { posts } = parsed;
+
+              const filteredPostsUrls = watchedState.app.posts.filter((post) => post.feedId === feedId).map((post) => post.postUrl);
+
+              posts.forEach((post) => {
+                const { postUrl } = post;
+                if (!filteredPostsUrls.includes(postUrl)) {
+                  addPostInPosts(post, feedId);
+                }
+              });
+              watchedState.app.state = 'uploading';
+              watchedState.app.state = 'updated';
+            });
+          })
+          .catch((error) => {
+            console.log(`Updating error: ${error}`);
+          })
+          .finally(() => {
+            setTimeout(startUpdatingPosts, 5000);
+          });
+      };
+
+      startUpdatingPosts();
+
+      const getTypeError = (error) => {
+        let typeError;
+
+        if (axios.isAxiosError(error)) {
+          typeError = 'networkError';
+        }
+
+        if (error.name === 'ValidationError') {
+          switch (error.type) {
+            case 'url':
+              typeError = 'invalidUrl';
+              break;
+            case 'notOneOf':
+              typeError = 'exists';
+              break;
+            default:
+              throw new Error(`Unknown error.type: ${error.type}`);
+          }
+        }
+
+        return typeError;
+      };
+
+      postsContainer.addEventListener('click', (e) => {
+        const getViewedPost = (button) => {
+          const id = Number(button.id);
+          return watchedState.ui.posts.find((post) => post.postId === id);
+        };
+
+        switch (e.target.tagName) {
+          case 'A': {
+            const button = e.target.nextSibling;
+            const viewedPost = getViewedPost(button);
+            viewedPost.state = 'viewed';
             break;
           }
-          case 'posts':
-            createContainerPosts(state, value, i18nInstance.t);
+          case 'BUTTON': {
+            const viewedPost = getViewedPost(e.target);
+            viewedPost.state = 'viewed';
+            watchedState.ui.modalId = Number(e.target.id);
             break;
-          case 'feeds':
-            createContainerFeeds(value, i18nInstance.t);
-            break;
-          case 'clickedLinks':
-            renderClick(state);
-            break;
+          }
           default:
             break;
         }
       });
 
-      const builtUpdate = (response, bigData) => {
-        const data = response.posts;
-        const diffData = data.filter((item) => !bigData.some((bigItem) => bigItem.title === item.title));
-        return diffData;
-      };
-
-      const checkNewPost = (newState) => {
-        const promises = newState.validLinks.map((link) =>
-          axios
-            .get(`${allOriginsUrl}${encodeURIComponent(link)}`)
-            .then((response) => {
-              const data = parser(response, i18nInstance.t);
-              const difference = builtUpdate(data, newState.posts);
-              if (difference.length !== 0) {
-                watchedState.posts.unshift(...difference);
-              }
-            })
-            .catch(() => {})
-        );
-        return Promise.all(promises).then(() => {
-          setTimeout(() => checkNewPost(newState), 5000);
-        });
-      };
-
-      Yup.setLocale({
-        mixed: {
-          notOneOf: i18nInstance.t('feedback.duplicate'),
-          required: i18nInstance.t('feedback.empty'),
-          default: i18nInstance.t('feedback.invalidUrl'),
-        },
-        string: {
-          url: i18nInstance.t('feedback.invalidUrl'),
-        },
-      });
-
-      const form = document.querySelector('.rss-form');
       form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
-        const url = formData.get('url');
-        validate(url, state.validLinks, i18nInstance.t)
-          .then(() => {
-            watchedState.form.formState = 'loading';
-          })
-          .then(() => axios.get(`${allOriginsUrl}${encodeURIComponent(url)}`))
-          .then((response) => {
-            const data = parser(response, i18nInstance.t);
-            const { mainDescription, mainTitle, posts } = data;
-            const feeds = { mainTitle, mainDescription };
-            watchedState.posts.push(...posts);
-            console.log(state.posts);
-            watchedState.feeds.unshift(feeds);
-            watchedState.form.formState = 'filling';
-          })
-          .then(() => {
-            watchedState.validLinks.push(url);
-            watchedState.form.formState = 'update';
-          })
-          .catch((err) => {
-            if (err.message === 'Network Error') {
-              watchedState.errorMessage = i18nInstance.t('feedback.axiosError');
-            } else {
-              watchedState.errorMessage = err.message;
-            }
-            watchedState.form.formState = 'error';
-          });
-      });
-      checkNewPost(state);
+        const enteredUrl = input.value;
 
-      const postsContainer = document.querySelector('.posts');
-      postsContainer.addEventListener('click', (e) => {
-        if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') {
-          const targetID = e.target.getAttribute('data-id');
-          watchedState.clickedLinks.push(targetID);
-          watchedState.activeItemId = targetID;
-          renderClick(watchedState);
-        }
+        createSchema()
+          .validate(enteredUrl)
+          .then((url) => {
+            watchedState.app.state = 'uploading';
+            return axios.get(`${alloriginsUrl}&url=${encodeURIComponent(url)}`);
+          })
+          .then((response) => {
+            const parsed = parseRss(response.data.contents, 'text/xml');
+            if (parsed === 'parsererror') {
+              watchedState.app.state = 'invalidRss';
+              return;
+            }
+
+            const feedId = watchedState.app.nextId;
+            watchedState.app.nextId += 1;
+            const feedUrl = getUrlFromResponse(response);
+            const { feedTitle, feedDescription } = parsed.feed;
+
+            watchedState.app.feeds.push({
+              feedId,
+              feedUrl,
+              feedTitle,
+              feedDescription,
+            });
+
+            parsed.posts.forEach((post) => {
+              addPostInPosts(post, feedId);
+            });
+
+            watchedState.app.state = 'uploaded';
+          })
+          .catch((error) => {
+            watchedState.app.state = getTypeError(error);
+          });
       });
     });
 };
-
-export default app;
