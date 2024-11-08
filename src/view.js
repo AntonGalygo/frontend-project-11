@@ -29,7 +29,6 @@ const startStateWatching = (state, i18nInstance) => {
     feedback.textContent = i18nInstance.t(`feedback.${state.app.state}`);
   };
 
-  /* eslint no-param-reassign: ["error", { "props": false }] */
   const makeContainerLayout = (container, containerHeader) => {
     container.innerHTML = '';
 

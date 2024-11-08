@@ -6,7 +6,6 @@ import resources from './locales/index.js';
 import { form, input, startStateWatching, postsContainer } from './view.js';
 
 const state = {
-  // 6 possible states: uploaded, exists, invalidUrl, invalidRss, uploading, updated
   app: {
     state: 'uploaded',
     nextId: 0,
@@ -20,8 +19,6 @@ const state = {
 };
 
 export default () => {
-  let watchedState;
-
   const i18nInstance = i18n.createInstance();
   i18nInstance
     .init({
@@ -30,7 +27,7 @@ export default () => {
       resources,
     })
     .then(() => {
-      watchedState = startStateWatching(state, i18nInstance);
+      const watchedState = startStateWatching(state, i18nInstance);
       const alloriginsUrl = 'https://allorigins.hexlet.app/get?disableCache=true';
 
       const createSchema = () => {
@@ -100,26 +97,20 @@ export default () => {
       startUpdatingPosts();
 
       const getTypeError = (error) => {
-        let typeError;
-
         if (axios.isAxiosError(error)) {
-          typeError = 'networkError';
+          return 'networkError';
         }
 
         if (error.name === 'ValidationError') {
           switch (error.type) {
             case 'url':
-              typeError = 'invalidUrl';
-              break;
+              return 'invalidUrl';
             case 'notOneOf':
-              typeError = 'exists';
-              break;
+              return 'exists';
             default:
               throw new Error(`Unknown error.type: ${error.type}`);
           }
         }
-
-        return typeError;
       };
 
       postsContainer.addEventListener('click', (e) => {
