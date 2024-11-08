@@ -1,34 +1,32 @@
 import onChange from 'on-change';
 
-const elements = {
-  form: document.querySelector('form'),
-  input: document.querySelector('form > input'),
-  button: document.querySelector('form > button'),
-  feedback: document.querySelector('.feedback'),
-  mainContainer: document.querySelector('.container-xxl'),
-  postsContainer: document.querySelector('.container-xxl > .posts'),
-  feedsContainer: document.querySelector('.container-xxl > .feeds'),
-};
+const form = document.querySelector('form');
+const input = form.querySelector('input');
+const button = form.querySelector('button');
+const feedback = document.querySelector('.feedback');
+const mainContainer = document.querySelector('.container-xxl');
+const postsContainer = mainContainer.querySelector('.posts');
+const feedsContainer = mainContainer.querySelector('.feeds');
 
 const startStateWatching = (state, i18nInstance) => {
   const makeFeedback = (feedbackClass) => {
     if (feedbackClass === 'text-success') {
-      elements.feedback.classList.remove('text-danger');
-      elements.feedback.classList.add('text-success');
+      feedback.classList.remove('text-danger');
+      feedback.classList.add('text-success');
     } else {
-      elements.feedback.classList.remove('text-success');
-      elements.feedback.classList.add('text-danger');
+      feedback.classList.remove('text-success');
+      feedback.classList.add('text-danger');
     }
 
     if (state.app.state === 'uploaded') {
-      elements.input.classList.remove('is-invalid');
-      elements.input.value = '';
-      elements.input.focus();
+      input.classList.remove('is-invalid');
+      input.value = '';
+      input.focus();
     } else {
-      elements.input.classList.add('is-invalid');
+      input.classList.add('is-invalid');
     }
 
-    elements.feedback.textContent = i18nInstance.t(`feedback.${state.app.state}`);
+    feedback.textContent = i18nInstance.t(`feedback.${state.app.state}`);
   };
 
   /* eslint no-param-reassign: ["error", { "props": false }] */
@@ -100,7 +98,7 @@ const startStateWatching = (state, i18nInstance) => {
       postButton.dataset.bsTarget = '#modal';
       postButton.textContent = i18nInstance.t('posts.postButton');
 
-      li.prepend(a, postButton);
+      li.append(a, postButton);
     });
   };
 
@@ -113,11 +111,11 @@ const startStateWatching = (state, i18nInstance) => {
   const fillMainContainer = () => {
     if (state.app.feeds.length > 0) {
       const postsContainerHeader = i18nInstance.t('postsContainerHeader');
-      const postsUlContainer = makeContainerLayout(elements.postsContainer, postsContainerHeader);
+      const postsUlContainer = makeContainerLayout(postsContainer, postsContainerHeader);
       fillPostsContainer(postsUlContainer, state.app.posts);
 
       const feedsContainerHeader = i18nInstance.t('feedsContainerHeader');
-      const feedsUlContainer = makeContainerLayout(elements.feedsContainer, feedsContainerHeader);
+      const feedsUlContainer = makeContainerLayout(feedsContainer, feedsContainerHeader);
       fillFeedsContainer(feedsUlContainer, state.app.feeds);
     }
   };
@@ -130,13 +128,13 @@ const startStateWatching = (state, i18nInstance) => {
         if (splittedPath[1] === 'state') {
           switch (state.app.state) {
             case 'uploaded':
-              elements.button.disabled = false;
+              button.disabled = false;
               fillMainContainer();
               makeFeedback('text-success', 'uploaded');
               break;
 
             case 'updated':
-              elements.button.disabled = false;
+              button.disabled = false;
               fillMainContainer();
               break;
 
@@ -145,12 +143,12 @@ const startStateWatching = (state, i18nInstance) => {
               break;
 
             case 'invalidRss':
-              elements.button.disabled = false;
+              button.disabled = false;
               makeFeedback('text-danger', 'invalidRss');
               break;
 
             case 'networkError':
-              elements.button.disabled = false;
+              button.disabled = false;
               makeFeedback('text-danger', 'networkError');
               break;
 
@@ -159,7 +157,7 @@ const startStateWatching = (state, i18nInstance) => {
               break;
 
             case 'uploading':
-              elements.button.disabled = true;
+              button.disabled = true;
               break;
 
             default:
@@ -209,5 +207,4 @@ const startStateWatching = (state, i18nInstance) => {
   return watchedState;
 };
 
-export { elements, startStateWatching };
-// export { elements.form, input, startStateWatching, postsContainer };
+export { form, input, startStateWatching, postsContainer };

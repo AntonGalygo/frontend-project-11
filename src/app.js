@@ -3,9 +3,10 @@ import axios from 'axios';
 import i18n from 'i18next';
 import parseRss from './parser.js';
 import resources from './locales/index.js';
-import { elements, startStateWatching } from './view.js';
+import { form, input, startStateWatching, postsContainer } from './view.js';
 
 const state = {
+  // 6 possible states: uploaded, exists, invalidUrl, invalidRss, uploading, updated
   app: {
     state: 'uploaded',
     nextId: 0,
@@ -19,6 +20,8 @@ const state = {
 };
 
 export default () => {
+  let watchedState;
+
   const i18nInstance = i18n.createInstance();
   i18nInstance
     .init({
@@ -27,7 +30,7 @@ export default () => {
       resources,
     })
     .then(() => {
-      const watchedState = startStateWatching(state, i18nInstance);
+      watchedState = startStateWatching(state, i18nInstance);
       const alloriginsUrl = 'https://allorigins.hexlet.app/get?disableCache=true';
 
       const createSchema = () => {
@@ -97,23 +100,29 @@ export default () => {
       startUpdatingPosts();
 
       const getTypeError = (error) => {
+        let typeError;
+
         if (axios.isAxiosError(error)) {
-          return 'networkError';
+          typeError = 'networkError';
         }
 
         if (error.name === 'ValidationError') {
           switch (error.type) {
             case 'url':
-              return 'invalidUrl';
+              typeError = 'invalidUrl';
+              break;
             case 'notOneOf':
-              return 'exists';
+              typeError = 'exists';
+              break;
             default:
               throw new Error(`Unknown error.type: ${error.type}`);
           }
         }
+
+        return typeError;
       };
 
-      elements.postsContainer.addEventListener('click', (e) => {
+      postsContainer.addEventListener('click', (e) => {
         const getViewedPost = (button) => {
           const id = Number(button.id);
           return watchedState.ui.posts.find((post) => post.postId === id);
@@ -137,9 +146,9 @@ export default () => {
         }
       });
 
-      elements.form.addEventListener('submit', (e) => {
+      form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const enteredUrl = elements.input.value;
+        const enteredUrl = input.value;
 
         createSchema()
           .validate(enteredUrl)
