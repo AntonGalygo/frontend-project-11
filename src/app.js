@@ -3,7 +3,7 @@ import axios from 'axios';
 import i18n from 'i18next';
 import parseRss from './parser.js';
 import resources from './locales/index.js';
-import { form, input, startStateWatching, postsContainer } from './view.js';
+import { elements, startStateWatching } from './view.js';
 
 const state = {
   app: {
@@ -113,7 +113,7 @@ export default () => {
         }
       };
 
-      postsContainer.addEventListener('click', (e) => {
+      elements.postsContainer.addEventListener('click', (e) => {
         const getViewedPost = (button) => {
           const id = Number(button.id);
           return watchedState.ui.posts.find((post) => post.postId === id);
@@ -137,9 +137,9 @@ export default () => {
         }
       });
 
-      form.addEventListener('submit', (e) => {
+      elements.form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const enteredUrl = input.value;
+        const enteredUrl = elements.input.value;
 
         createSchema()
           .validate(enteredUrl)
