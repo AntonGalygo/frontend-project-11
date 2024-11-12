@@ -31,7 +31,7 @@ const startStateWatching = (state, i18nInstance) => {
   };
 
   const makeContainerLayout = (container, containerHeader) => {
-    /*eslint no-param-reassign: "error"*/
+    /* eslint no-param-reassign: "error" */
     container.innerHTML = ' ';
 
     const card = document.createElement('div');
