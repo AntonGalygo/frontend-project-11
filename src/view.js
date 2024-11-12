@@ -9,14 +9,6 @@ const elements = {
   feedsContainer: document.querySelector('.container-xxl .feeds'),
 };
 
-// const form = document.querySelector('form');
-// const input = document.querySelector('form input');
-// const button = document.querySelector('form button');
-// const feedback = document.querySelector('.feedback');
-// const mainContainer = document.querySelector('.container-xxl');
-// const postsContainer = document.querySelector('.container-xxl .posts');
-// const feedsContainer = document.querySelector('.container-xxl .feeds');
-
 const startStateWatching = (state, i18nInstance) => {
   const makeFeedback = (feedbackClass) => {
     if (feedbackClass === 'text-success') {
@@ -39,7 +31,7 @@ const startStateWatching = (state, i18nInstance) => {
   };
 
   const makeContainerLayout = (container, containerHeader) => {
-    container.innerHTML = '';
+    container.innerHTML = ' ';
 
     const card = document.createElement('div');
     card.classList.add('card', 'border-0');

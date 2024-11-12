@@ -73,7 +73,7 @@ export default () => {
 
               const parsed = parseRss(response.data.contents, 'text/xml');
               const { posts } = parsed;
-
+              /* eslint-disable max-len */
               const filteredPostsUrls = watchedState.app.posts.filter((post) => post.feedId === feedId).map((post) => post.postUrl);
 
               posts.forEach((post) => {
@@ -111,6 +111,7 @@ export default () => {
               throw new Error(`Unknown error.type: ${error.type}`);
           }
         }
+        return new Error(`Unknown error.type: ${error.type}`);
       };
 
       elements.postsContainer.addEventListener('click', (e) => {
