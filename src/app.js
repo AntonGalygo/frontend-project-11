@@ -7,7 +7,7 @@ import { elements, startStateWatching } from './view.js';
 
 const state = {
   app: {
-    state: 'uploaded',
+    state: '',
     nextId: 0,
     feeds: [],
     posts: [],
